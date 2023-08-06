@@ -1,0 +1,2 @@
+(localStorage.getItem('mode')) === 'darkmode' ? document.querySelector('#modeSwitch').classList.add('dark-mode') : document.querySelector('#modeSwitch').classList.remove('dark-mode')
+function darkMode(){localStorage.setItem("mode","darkmode"===localStorage.getItem("mode")?"light":"darkmode"),"darkmode"===localStorage.getItem("mode")?document.querySelector("#modeSwitch").classList.add("dark-mode"):document.querySelector("#modeSwitch").classList.remove("dark-mode");location.reload();};
