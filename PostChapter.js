@@ -105,7 +105,7 @@ const ImageManager = (function () {
     return null;
   };
 
-  const loadImageAsBlob = (src) => {
+  const loadImageBlob = (src) => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("GET", src, true);
@@ -115,12 +115,12 @@ const ImageManager = (function () {
         if (xhr.status === 200) {
           resolve(xhr.response);
         } else {
-          reject(new Error(`Failed to load image as blob. Status: ${xhr.status}`));
+          reject(new Error(`Failed to load image: ${src}`));
         }
       };
 
       xhr.onerror = () => {
-        reject(new Error("Failed to load image as blob."));
+        reject(new Error(`Failed to load image: ${src}`));
       };
 
       xhr.send();
@@ -144,10 +144,10 @@ const ImageManager = (function () {
 
       if (src) {
         try {
-          const blob = await loadImageAsBlob(src);
-          const imageUrl = URL.createObjectURL(blob);
-
+          const imageBlob = await loadImageBlob(src);
+          const imageURL = URL.createObjectURL(imageBlob);
           const image = new Image();
+
           const canvasWrapper = document.createElement("div");
           canvasWrapper.className = "canvas-wrapper";
 
@@ -165,10 +165,10 @@ const ImageManager = (function () {
             canvasWrapper.style.maxWidth = `${image.width}px`;
             canvasWrapper.style.maxHeight = `${image.height}px`;
 
-            // Phóng blob sau khi vẽ canvas
-            URL.revokeObjectURL(imageUrl);
+            URL.revokeObjectURL(imageURL);
           };
-          image.src = imageUrl;
+
+          image.src = imageURL;
         } catch (error) {
           console.error(error);
         }
