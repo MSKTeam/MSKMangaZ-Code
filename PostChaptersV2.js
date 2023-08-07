@@ -175,7 +175,7 @@ const ImageManager = (function () {
       }
 
       loadedImages++;
-      currentLoadTask = setTimeout(loadNext, 500);
+      currentLoadTask = setTimeout(loadNext, 0);
     };
 
     loadNext();
@@ -190,7 +190,7 @@ const ImageManager = (function () {
       currentLoadTask = setTimeout(() => {
         currentLoadTask = null;
         loadNextImage(imgTags);
-      }, 500);
+      }, 0);
     },
 
     cancelImageLoad: function () {
