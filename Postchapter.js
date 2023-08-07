@@ -105,14 +105,36 @@ const ImageManager = (function () {
     return null;
   };
 
-  const loadNextImage = (imgTags) => {
+  const loadImageAsBlob = (src) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", src, true);
+      xhr.responseType = "blob";
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          resolve(xhr.response);
+        } else {
+          reject(new Error(`Failed to load image as blob. Status: ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error("Failed to load image as blob."));
+      };
+
+      xhr.send();
+    });
+  };
+
+  const loadNextImage = async (imgTags) => {
     const imgTagsArray = imgTags.match(/<img[^>]+>/g);
     const totalImages = imgTagsArray.length;
     let loadedImages = 0;
     const canvases = [];
     const canvasContainer = document.getElementById("canvas-chapter");
 
-    const loadNext = () => {
+    const loadNext = async () => {
       if (loadedImages >= totalImages) {
         return;
       }
@@ -121,25 +143,35 @@ const ImageManager = (function () {
       const src = getModifiedSrc(imgTag);
 
       if (src) {
-        const image = new Image();
-        const canvasWrapper = document.createElement("div");
-        canvasWrapper.className = "canvas-wrapper";
+        try {
+          const blob = await loadImageAsBlob(src);
+          const imageUrl = URL.createObjectURL(blob);
 
-        const canvas = document.createElement("canvas");
-        canvases.push(canvas);
-        canvasWrapper.appendChild(canvas);
-        canvasContainer.appendChild(canvasWrapper);
+          const image = new Image();
+          const canvasWrapper = document.createElement("div");
+          canvasWrapper.className = "canvas-wrapper";
 
-        image.onload = function () {
-          canvas.width = image.width;
-          canvas.height = image.height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(image, 0, 0);
+          const canvas = document.createElement("canvas");
+          canvases.push(canvas);
+          canvasWrapper.appendChild(canvas);
+          canvasContainer.appendChild(canvasWrapper);
 
-          canvasWrapper.style.maxWidth = `${image.width}px`;
-          canvasWrapper.style.maxHeight = `${image.height}px`;
-        };
-        image.src = src;
+          image.onload = function () {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(image, 0, 0);
+
+            canvasWrapper.style.maxWidth = `${image.width}px`;
+            canvasWrapper.style.maxHeight = `${image.height}px`;
+
+            // Phóng blob sau khi vẽ canvas
+            URL.revokeObjectURL(imageUrl);
+          };
+          image.src = imageUrl;
+        } catch (error) {
+          console.error(error);
+        }
       }
 
       loadedImages++;
