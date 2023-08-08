@@ -90,13 +90,13 @@ window.addEventListener("popstate", function() {
 const ImageManager = (function () {
   let currentLoadTask = null;
 
-  const getModifiedSrc = function (imgTag) {
+  const getModifiedSrc = (imgTag) => {
     const srcRegex = /src=(["'])(.*?)\1/;
     const match = imgTag.match(srcRegex);
     if (match) {
       let src = match[2];
       src = src.replace(/s1600/, "s1600-rw");
-      src = src.replace(/s1600-rw\/.*/, "s1600-rw/MSKTeam.webp");
+      src = src.replace(/s1600-rw\/.*/, "s1600-rw/M.webp");
       const domains = ['i0.wp.com', 'i1.wp.com', 'i2.wp.com', 'i3.wp.com'];
       const randomDomain = domains[Math.floor(Math.random() * domains.length)];
       const modifiedSrc = src.replace(/https?:\/\//, `https://${randomDomain}/`);
@@ -105,73 +105,39 @@ const ImageManager = (function () {
     return null;
   };
 
-  const loadImageBlobAsync = function (src) {
-    return fetch(src)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Failed to load image: ${src}`);
-        }
-        return response.arrayBuffer();
-      })
-      .then(arrayBuffer => new Blob([arrayBuffer]))
-      .catch(error => {
-        throw new Error(`Failed to load image: ${src}`);
-      });
-  };
+  const loadNextImageAsync = async (imgTagsArray, index, canvasContainer) => {
+    if (index >= imgTagsArray.length) {
+      return;
+    }
 
-  const loadNextImage = function (imgTags) {
-    const imgTagsArray = imgTags.match(/<img[^>]+>/g);
-    const totalImages = imgTagsArray.length;
-    let loadedImages = 0;
-    const canvases = [];
-    const canvasContainer = document.getElementById("canvas-chapter");
+    const imgTag = imgTagsArray[index];
+    const src = getModifiedSrc(imgTag);
 
-    const loadNext = function () {
-      if (loadedImages >= totalImages) {
-        return;
-      }
+    if (src) {
+      const image = new Image();
+      const canvasWrapper = document.createElement("div");
+      canvasWrapper.className = "canvas-wrapper";
 
-      const imgTag = imgTagsArray[loadedImages];
-      const src = getModifiedSrc(imgTag);
+      const canvas = document.createElement("canvas");
+      canvasWrapper.appendChild(canvas);
+      canvasContainer.appendChild(canvasWrapper);
 
-      if (src) {
-        const imageBlobPromise = loadImageBlobAsync(src);
+      image.onload = function () {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
 
-        imageBlobPromise.then(imageBlob => {
-          const imageURL = URL.createObjectURL(imageBlob);
-          const image = new Image();
+        canvasWrapper.style.maxWidth = `${image.width}px`;
+        canvasWrapper.style.maxHeight = `${image.height}px`;
+      };
 
-          const canvasWrapper = document.createElement("div");
-          canvasWrapper.className = "canvas-wrapper";
+      image.src = src; // Set the modified source directly
+    }
 
-          const canvas = document.createElement("canvas");
-          canvases.push(canvas);
-          canvasWrapper.appendChild(canvas);
-          canvasContainer.appendChild(canvasWrapper);
-
-          image.onload = function () {
-            canvas.width = image.width;
-            canvas.height = image.height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(image, 0, 0);
-
-            canvasWrapper.style.maxWidth = `${image.width}px`;
-            canvasWrapper.style.maxHeight = `${image.height}px`;
-
-            URL.revokeObjectURL(imageURL);
-          };
-
-          image.src = imageURL;
-        }).catch(error => {
-          console.error(error);
-        });
-      }
-
-      loadedImages++;
-      currentLoadTask = setTimeout(loadNext, 300);
-    };
-
-    loadNext();
+    setTimeout(() => {
+      loadNextImageAsync(imgTagsArray, index + 1, canvasContainer);
+    }, 300);
   };
 
   return {
@@ -180,10 +146,13 @@ const ImageManager = (function () {
         clearTimeout(currentLoadTask);
       }
 
-      currentLoadTask = setTimeout(function () {
+      const imgTagsArray = imgTags.match(/<img[^>]+>/g);
+      const canvasContainer = document.getElementById("canvas-chapter");
+
+      currentLoadTask = setTimeout(() => {
         currentLoadTask = null;
-        loadNextImage(imgTags);
-      }, 0);
+        loadNextImageAsync(imgTagsArray, 0, canvasContainer);
+      }, 300);
     },
 
     cancelImageLoad: function () {
