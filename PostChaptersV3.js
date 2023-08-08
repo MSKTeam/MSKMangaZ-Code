@@ -90,7 +90,7 @@ window.addEventListener("popstate", function() {
 const ImageManager = (function () {
   let currentLoadTask = null;
 
-  const getModifiedSrc = (imgTag) => {
+  const getModifiedSrc = function (imgTag) {
     const srcRegex = /src=(["'])(.*?)\1/;
     const match = imgTag.match(srcRegex);
     if (match) {
@@ -105,36 +105,28 @@ const ImageManager = (function () {
     return null;
   };
 
-  const loadImageBlob = (src) => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("GET", src, true);
-      xhr.responseType = "blob";
-
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          resolve(xhr.response);
-        } else {
-          reject(new Error(`Failed to load image: ${src}`));
+  const loadImageBlobAsync = function (src) {
+    return fetch(src)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to load image: ${src}`);
         }
-      };
-
-      xhr.onerror = () => {
-        reject(new Error(`Failed to load image: ${src}`));
-      };
-
-      xhr.send();
-    });
+        return response.arrayBuffer();
+      })
+      .then(arrayBuffer => new Blob([arrayBuffer]))
+      .catch(error => {
+        throw new Error(`Failed to load image: ${src}`);
+      });
   };
 
-  const loadNextImage = async (imgTags) => {
+  const loadNextImage = function (imgTags) {
     const imgTagsArray = imgTags.match(/<img[^>]+>/g);
     const totalImages = imgTagsArray.length;
     let loadedImages = 0;
     const canvases = [];
     const canvasContainer = document.getElementById("canvas-chapter");
 
-    const loadNext = async () => {
+    const loadNext = function () {
       if (loadedImages >= totalImages) {
         return;
       }
@@ -143,8 +135,9 @@ const ImageManager = (function () {
       const src = getModifiedSrc(imgTag);
 
       if (src) {
-        try {
-          const imageBlob = await loadImageBlob(src);
+        const imageBlobPromise = loadImageBlobAsync(src);
+
+        imageBlobPromise.then(imageBlob => {
           const imageURL = URL.createObjectURL(imageBlob);
           const image = new Image();
 
@@ -169,13 +162,13 @@ const ImageManager = (function () {
           };
 
           image.src = imageURL;
-        } catch (error) {
+        }).catch(error => {
           console.error(error);
-        }
+        });
       }
 
       loadedImages++;
-      currentLoadTask = setTimeout(loadNext, 0);
+      currentLoadTask = setTimeout(loadNext, 399);
     };
 
     loadNext();
@@ -187,10 +180,10 @@ const ImageManager = (function () {
         clearTimeout(currentLoadTask);
       }
 
-      currentLoadTask = setTimeout(() => {
+      currentLoadTask = setTimeout(function () {
         currentLoadTask = null;
         loadNextImage(imgTags);
-      }, 0);
+      }, 399);
     },
 
     cancelImageLoad: function () {
